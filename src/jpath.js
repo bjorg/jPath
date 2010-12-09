@@ -20,49 +20,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *
- * Usage:      
- *   var jpath = new JPath( myjsonobj );
- *
- *   var somevalue = jpath.$('book/title').json;  //results in title
- *      //or
- *   var somevalue = jpath.query('book/title');   //results in title
- *
- * Supported XPath-like Syntax:
- *   /tagname
- *   //tagname
- *   tagname
- *   * wildcard
- *   [] predicates
- *   operators ( >=, ==, <= )
- *   array selection
- *   .. 	         
- *   *
- *   and, or
- *   nodename[0]
- *   nodename[last()]
- *   nodename[position()]
- *   nodename[last()-1]
- *   nodename[somenode > 3]/node
- *   nodename[count() > 3]/node
- *
- * Tested With:
- *   Firefox 2-3, IE 6-7
- *
- * Update Log:
- *   1.0.1 - Bugfix for zero-based element selection
- *   1.0.2 - Bugfix for IE not handling eval() and returning a function
- *   1.0.3 - Bugfix added support for underscore and dash in query() function
- *           Bugfix improper use of Array.concat which was flattening arrays
- *           Added support for single equal sign in query() function
- *           Added support for count() xpath function
- *           Added support for and, or boolean expression in predicate blocks
- *           Added support for global selector $$ and //
- *           Added support for wildcard (*) selector support 
- *   1.0.4 - Changed to MIT license
- *   1.0.5 - Added jPath as alias to JPath
- *           Using $.extend to extend jPath prototype
- *           Moved initalizing into a function closure
  */
 (function() {
     var root = this;
