@@ -16,8 +16,8 @@ Features
 
 Using JPath
 -----------
-There are two syntactic methods to using JPath — chained method calls or an XPath query.
+There are two syntactic methods to using JPath - chained method calls or an XPath query.
 
 Chained method calls offers the most control but with a high level of complexity. 
-XPath query is a lot easier to use but with the caveat that it’s considered beta 
+XPath query is a lot easier to use but with the caveat that it's considered beta 
 and rather limited as far as Javascript features go.
