@@ -2,7 +2,7 @@
  * JPath 1.0.5 - json equivalent to xpath
  * Copyright (C) 2009  Bryan English <bryan at bluelinecity dot com>
  * Copyright (C) 2010  Steve Bjorg <steveb at mindtouch dot com>
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -12,7 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,25 +24,56 @@
 (function() {
     var root = this;
     
+    // jPath definition
     var JPath = root.jPath = root.JPath = function(json, parent) {
-        this.json = json;
-        this._parent = parent;
-    };
-    
-    $.extend(JPath.prototype, {
-    
+        if (!(this instanceof JPath)) {
+            return new JPath(json, parent);
+        }
+        
         /*
          * Property: json
          *   Copy of current json segment to operate on
          */
-        json: null,
+        this.json = json;
         
         /*
          * Property: parent
          *   Parent json object, null if root.
          */
-        parent: null,
-        
+        this._parent = parent || null;
+    };
+    
+    // private jPath functions
+    
+    /*
+     * Function: _findAllByRegExp
+     *   Looks through a list of an object properties using a regular expression
+     * Parameters:
+     *   re - regular expression, to use to search with
+     *   obj - object, the object to search through
+     * Returns:
+     *   array - resulting properties
+     */
+    var _findAllByRegExp = function(re, obj) {
+        var a = [];
+        if (obj instanceof Array) {
+            for (var i = 0, length = obj.length, value = obj[0]; i < length; value = obj[++i]) {
+                a = a.concat(_findAllByRegExp(re, value));
+            }
+        } else {
+            for (var p in obj) {
+                var value = obj[p];
+                if (typeof(value) !== 'function' && re.test(p)) {
+                    a.push(value);
+                }
+            }
+        }
+        return a;
+    };
+    
+    // public jPath methods
+    $.extend(JPath.prototype, {
+    
         /*
          * Method: $
          *   Performs a find query on the current jpath object.
@@ -55,44 +86,50 @@
             var result = null;
             var working = this;
             
+            // check if there's anything to do
             if (this.json && str !== null) {
+            
+                // determine how to interpret the parameter
                 switch (typeof(str)) {
                 case 'function':
+                    
+                    // use parameter as selection function
                     result = this.f(str).json;
                     break;
-                    
                 case 'number':
+                    
+                    // use parameter as index
                     result = this.json[str] || null;
                     break;
-                    
                 case 'string':
-                    var names = str.split('/');
                     
-                    //foreach slash delimited node name//
-                    for (var i = 0; i < names.length; i++) {
-                        var name = new RegExp('^' + names[i].replace(/\*/g, '.*') + '$');
+                    // use parameter as path expression
+                    var names = str.replace('*', '.*').split('/');
+                    
+                    // foreach slash delimited node name
+                    for (var i = 0, length = names.length, value = names[0]; i < length; value = names[++i]) {
+                        var name = new RegExp('^' + value + '$');
                         var isArray = (working.json instanceof Array);
-                        var a = new Array();
+                        var a = [];
                         
-                        //foreach working node property//
+                        // foreach working node property
                         for (var p in working.json) {
-                            if (typeof(working.json[p]) != 'function') {
-                                if (isArray && (arguments.callee.caller != this.$$)) {
-                                    a = a.concat(this.findAllByRegExp(name, working.json[p]));
+                            var property = working.json[p];
+                            
+                            // skip functions
+                            if (typeof(property) !== 'function') {
+                                if (isArray && (arguments.callee.caller !== this.$$)) {
+                                    a = a.concat(_findAllByRegExp(name, property));
                                 } else if (name.test(p)) {
-                                    a.push(working.json[p]);
+                                    a.push(property);
                                 }
                             }
                         }
-                        
-                        working = new JPath((a.length == 0 ? null : ((a.length == 1) ? a[0] : a)), working);
+                        working = new JPath((a.length === 0 ? null : (a.length === 1) ? a[0] : a), working);
                     }
-                    
                     return working;
-                    break;
                 }
             }
-            
             return new JPath(result, this);
         },
         
@@ -105,44 +142,34 @@
          *   jpath - Returns the resulting jpath object after performing find query.
          */
         '$$': function(str) {
-            var r = this.$(str, true).json;
-            var arr = new Array();
-            
-            if (r instanceof Array) 
-                arr = arr.concat(r);
-            else if (r !== null) 
-                arr.push(r);
-            
-            for (var p in this.json) {
-                if (typeof(this.json[p]) == 'object') {
-                    arr = arr.concat(new JPath(this.json[p], this).$$(str).json);
-                }
-            }
-            
-            return new JPath(arr, this);
-        },
         
-        /*
-         * Method: findAllByRegExp
-         *   Looks through a list of an object properties using a regular expression
-         * Parameters:
-         *   re - regular expression, to use to search with
-         *   obj - object, the object to search through
-         * Returns:
-         *   array - resulting properties
-         */
-        findAllByRegExp: function(re, obj) {
-            var a = new Array();
+            // match all nodes for current scope
+            var r = this.$(str).json;
+            var arr = [];
             
-            for (var p in obj) {
-                if (obj instanceof Array) {
-                    a = a.concat(this.findAllByRegExp(re, obj[p]));
-                } else if (typeof(obj[p]) != 'function' && re.test(p)) {
-                    a.push(obj[p]);
-                }
+            // check if match returned an array
+            if (r instanceof Array) {
+            
+                // append array to result
+                arr = arr.concat(r);
+            } else if (r !== null) {
+            
+                // add item to result
+                arr.push(r);
             }
             
-            return a;
+            // enumerate all properties of the current scope
+            for (var p in this.json) {
+                var property = this.json[p];
+                
+                // if property is an object, recurse into it
+                if (typeof(property) === 'object') {
+                
+                    // append recursive matches to result
+                    arr = arr.concat(new JPath(property, this).$$(str).json);
+                }
+            }
+            return new JPath(arr, this);
         },
         
         /*
@@ -172,20 +199,17 @@
                 "count\\(([^\\)]+)\\)": "count('$1')"
             };
             
-            //save quoted strings//
+            // save quoted strings
             var quotes = /(\'|\")([^\1]*)\1/;
-            var saves = new Array();
+            var saves = [];
             while (quotes.test(str)) {
                 saves.push(str.match(quotes)[2]);
                 str = str.replace(quotes, '%' + (saves.length - 1) + '%');
             }
-            
             for (var e in re) {
                 str = str.replace(new RegExp(e, 'ig'), re[e]);
             }
-            //alert('this.' + str.replace(/\%(\d+)\%/g,'saves[$1]') + ";");
-            
-            return eval('this.' + str.replace(/\%(\d+)\%/g, 'saves[$1]') + ";");
+            return eval('this.' + str.replace(/\%(\d+)\%/g, 'saves[$1]') + ';');
         },
         
         /*
@@ -199,12 +223,16 @@
          *   jpath - Returns the resulting jpath object after performing find query.
          */
         f: function(iterator) {
-            var a = new Array();
+            var a = [];
             
-            if (typeof(iterator) == 'string') {
+            // check if iterator is an expression string
+            if (typeof(iterator) === 'string') {
+            
+                // convert iterator into a function
                 eval('iterator = function(j){with(j){return(' + iterator + ');}}');
             }
             
+            // iterate over all entries
             for (var p in this.json) {
                 var j = new JPath(this.json[p], this);
                 j.index = p;
@@ -212,7 +240,6 @@
                     a.push(this.json[p]);
                 }
             }
-            
             return new JPath(a, this);
         },
         
@@ -223,7 +250,7 @@
          *   jpath - Returns the parent jpath object or itself if its the root node
          */
         parent: function() {
-            return ((this._parent) ? this._parent : this);
+            return (this._parent) ? this._parent : this;
         },
         
         /*
@@ -243,7 +270,7 @@
          *   booean - Returns true if this is the last node in the nodeset
          */
         last: function() {
-            return (this.index == (this._parent.json.length - 1));
+            return this.index === (this._parent.json.length - 1);
         },
         
         /*
@@ -256,7 +283,7 @@
          */
         count: function(n) {
             var found = this.$(n || '*').json;
-            return (found ? (found instanceof Array ? found.length : 1) : 0);
+            return found ? (found instanceof Array ? found.length : 1) : 0;
         },
         
         /*
@@ -266,7 +293,39 @@
          *   jpath - The top level, root jpath object.
          */
         root: function() {
-            return (this._parent ? this._parent.root() : this);
+            return this._parent ? this._parent.root() : this;
+        },
+        
+        /*
+         * Method: text
+         *   Returns the text value of the current node
+         * Return:
+         *   string - Return text value of the current node
+         */
+        text: function() {
+            var json = this.json;
+            while (json !== null) {
+                switch (typeof(json)) {
+                case 'boolean':
+                case 'number':
+                    return json.toString();
+                case 'string':
+                    return json;
+                case 'object':
+                    if (typeof json.length === 'undefined') {
+                        var text = json['#text'];
+                        return (typeof text !== 'undefined') ? text : null;
+                    } else if (json.length > 0) {
+                        json = json[0];
+                    } else {
+                        return null;
+                    }
+                    break;
+                default:
+                    return null;
+                }
+            }
+            return null;
         }
     });
 })();
