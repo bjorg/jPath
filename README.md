@@ -2,6 +2,8 @@ JPath
 =====
 *XPath for JSON*
 
+**NOTE**: I'm no longer maintaining this code.  Look at [jDoc](https://github.com/bjorg/jdoc) instead, which provides similar functionality.
+
 JPath is a simple lightweight Javascript Class which provides an XPath-like querying ability to JSON objects.
 
 Features
